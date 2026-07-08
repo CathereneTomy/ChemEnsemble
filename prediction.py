@@ -1,77 +1,3 @@
-"""
-predict_new_molecules.py
-
-Loads a saved model/ensemble package (pickle) produced by your QSAR pipeline,
-automatically computes only the feature types that package actually needs
-(Descriptors / Fingerprints / Chemberta Embeddings / Molformer Embeddings),
-applies the correct saved scaler per feature type, runs the model(s), and
-writes predictions to a CSV.
-
--------------------------------------------------------------------------
-REQUIRED INPUT: the package pickle must be a dict shaped like this
-(this matches the `saved_top3` / `package_member` structure built earlier
-in the pipeline):
-
-    {
-        "type": "single" | "ensemble",
-        "members": [
-            {
-                "features": "Descriptors" | "Fingerprints" |
-                            "Chemberta Embeddings" | "Molformer Embeddings",
-                "model_name": str,
-                "model": <fitted sklearn-like model, has .predict()>,
-                "scaler": <fitted StandardScaler, has .transform()>,
-                # only present / required for "Descriptors":
-                "desc_columns_used": [list of column names, exact training order]
-            },
-            ...
-        ],
-        "test_rmse": float,   # optional, informational only
-        "oof_rmse": float,    # optional, informational only
-    }
-
-If your saved pickle is a *dict of packages* (e.g. saved_top3 with multiple
-entries), pass --package_key to select which one to use, otherwise the
-script will use the single top entry (lowest test_rmse if multiple present,
-or the only entry if there's just one).
-
--------------------------------------------------------------------------
-USAGE:
-
-    python predict_new_molecules.py \
-        --model_path top3_deployable_models.pkl \
-        --input_csv new_molecules.csv \
-        --smiles_col SMILES \
-        --output_csv predictions.csv \
-        [--package_key "Fingerprints__RandomForest + Descriptors__Ridge"]
-
--------------------------------------------------------------------------
-NOTES / THINGS TO DOUBLE-CHECK BEFORE TRUSTING THE OUTPUT:
-
-1. Descriptors: this script recomputes the FULL RDKit descriptor set, then
-   subsets down to the exact column list your training pipeline ended up
-   keeping after its own NaN/constant-column filtering. That column list
-   MUST be embedded in the package under "desc_columns_used" for any member
-   using "Descriptors" features, or this script will raise an error rather
-   than silently mis-align columns.
-
-2. Fingerprints: uses Morgan fingerprints, radius=2, nBits=1024 (matches
-   the training code you shared). If you changed these values later in
-   your notebook without telling me, update RADIUS / N_BITS below to match.
-
-3. Chemberta / Molformer: only loaded into memory if the package actually
-   needs them (lazy loading) since these are large transformer models.
-   Uses mean pooling for ChemBERTa (matching your training code) and the
-   model's own pooler_output for MoLFormer (matching your training code).
-
-4. Invalid SMILES: rows with unparseable SMILES get NaN features and will
-   likely produce NaN or garbage predictions -- these rows are flagged in
-   the output CSV with an "is_valid_smiles" column so you can filter them.
-
-5. This script does NOT retrain or refit anything. It only transforms new
-   molecules using scalers/models that were already fit during training.
-"""
-
 import argparse
 import os
 import pickle
@@ -81,9 +7,7 @@ import numpy as np
 import pandas as pd
 
 
-# ---------------------------------------------------------------
-# Feature computation settings -- MUST match your training pipeline
-# ---------------------------------------------------------------
+
 N_BITS = 1024
 RADIUS = 2
 CHEMBERTA_CHECKPOINT = "DeepChem/ChemBERTa-77M-MLM"
