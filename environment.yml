@@ -1,0 +1,32 @@
+name: embedding-pipeline
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.14
+  - numpy=2.4.3
+  - pandas=3.0.1
+  - matplotlib=3.10.8
+  - seaborn=0.13.2
+  - scikit-learn=1.8.0
+  - rdkit=2026.03.1
+  - scipy=1.17.1
+  - joblib=1.5.3
+  - pyarrow=24.0.0
+  - pillow=12.2.0
+  - pyyaml=6.0.3
+  - ipykernel=7.2.0
+  - pip
+
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cpu
+      - torch==2.11.0
+      - torchvision==0.26.0
+
+      - transformers==5.5.0
+      - accelerate==1.13.0
+      - tokenizers==0.22.2
+      - safetensors==0.7.0
+      - huggingface_hub==1.7.2
+
