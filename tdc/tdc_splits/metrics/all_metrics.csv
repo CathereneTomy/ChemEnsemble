@@ -1,0 +1,10 @@
+data_name,metric,std,source_file
+caco2_wang,0.286,0.005,_predictions_test_pred_metrics_Caco2_Wang.json
+clearance_hepatocyte_az,0.46,0.009,_predictions_test_pred_metrics_Clearance_Hepatocyte_AZ.json
+clearance_microsome_az,0.609,0.016,_predictions_test_pred_metrics_Clearance_Microsome_AZ.json
+half_life_obach,0.562,0.028,_predictions_test_pred_metrics_Half_Life_Obach.json
+ld50_zhu,0.581,0.011,_predictions_test_pred_metrics_LD50_Zhu.json
+lipophilicity_astrazeneca,0.514,0.006,_predictions_test_pred_metrics_Lipophilicity_AstraZeneca.json
+ppbr_az,7.611,0.083,_predictions_test_pred_metrics_PPBR_AZ.json
+solubility_aqsoldb,0.785,0.011,_predictions_test_pred_metrics_Solubility_AqSolDB.json
+vdss_lombardo,0.717,0.005,_predictions_test_pred_metrics_VDss_Lombardo.json
