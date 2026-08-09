@@ -97,3 +97,19 @@ python prediction.py --model_path "model_path.pkl" --input_csv "input.csv" --smi
 | `--input_csv` | CSV with molecules to predict. |
 | `--smiles_col` | SMILES column name. |
 | `--output_csv` | Path to save predictions. |
+
+## TDC Performance
+
+Performance comparison against the top-performing model for each TDC ADMET benchmark. Only data as provided by the TDC train_val was used to build the models. Values are reported as mean ± standard deviation across the evaluated seeds.
+
+| Dataset | Metric | Top Model | Our Model |
+|---|---|---:|---:|
+| Caco2 Wang | MAE ↓ | 0.256 ± 0.006 | 0.286 ± 0.005 |
+| Lipophilicity AstraZeneca | MAE ↓ | 0.456 ± 0.008 | 0.514 ± 0.006 |
+| Solubility AqSolDB | MAE ↓ | 0.741 ± 0.013 | 0.785 ± 0.011 |
+| PPBR AZ | MAE ↓ | 7.440 ± 0.024 | 7.611 ± 0.083 |
+| LD50 Zhu | MAE ↓ | 0.552 ± 0.009 | 0.581 ± 0.011 |
+| Clearance Hepatocyte AZ | Spearman ↑ | 0.536 ± 0.020 | 0.460 ± 0.009 |
+| Clearance Microsome AZ | Spearman ↑ | 0.630 ± 0.010 | 0.609 ± 0.016 |
+| Half-Life Obach | Spearman ↑ | 0.576 ± 0.025 | 0.562 ± 0.028 |
+| VDss Lombardo | Spearman ↑ | 0.713 ± 0.007 | 0.717 ± 0.005 |
