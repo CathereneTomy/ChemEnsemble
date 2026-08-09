@@ -1,69 +1,65 @@
-# Feature--Model Combination and Ensemble Strategy
+# Feature–Model Combination and Ensemble Strategy
 
-This project evaluates four complementary molecular representations:
+This project evaluates complementary molecular representations across multiple regression models for molecular activity prediction.
 
--   **RDKit descriptors**
--   **ECFP4 fingerprints**
--   **ChemBERTa embeddings**
--   **MoLFormer embeddings**
+### Molecular Representations
 
-across nine regression models to predict molecular activity.
+The following five molecular representations are evaluated:
 
-Simply concatenating all feature types is not used as the primary
-approach. Continuous-valued features (descriptors and learned
-embeddings) often dominate sparse binary fingerprint bits in many
-machine learning models, causing fingerprint information to be
-under-utilized rather than contributing equally. Likewise, different
-regression algorithms (linear, tree-based, distance-based, etc.) capture
-different relationships from the same representation, meaning that no
-single feature--model combination performs best for every molecule.
+* **RDKit descriptors**
+* **ECFP4 fingerprints**
+* **ChemBERTa embeddings**
+* **MoLFormer embeddings**
+* **ErG fingerprints**
 
-This becomes especially apparent for **activity cliffs**, where small
-structural changes produce large changes in biological activity. Models
-frequently disagree on these difficult compounds, with one correctly
-predicting molecules that another misses.
+These representations are evaluated across fourteen regression models to identify effective feature–model combinations for each dataset.
 
-## Why Ensemble?
+## Why Not Simply Combine All Features?
 
-Although model diversity suggests that combining predictions could
-improve performance, ensembling is **not automatically beneficial**. A
-simple average assumes every model contributes equally, but averaging
-can also reduce the impact of a model that is genuinely correct on
-difficult molecules by pulling its predictions toward the consensus.
-Consequently, blindly combining all models can dilute strong predictions
-instead of improving them.
+Concatenating all feature types is not used as the primary approach. Continuous-valued features, such as molecular descriptors and learned embeddings, can dominate sparse binary fingerprint features in many machine learning models. As a result, fingerprint information may be under-utilized rather than contributing equally to the prediction.
 
-The important part is to identify modes that make different mistakes.
+Furthermore, different regression algorithms—including linear, tree-based, and distance-based models—capture different relationships from the same molecular representation. Consequently, no single feature–model combination consistently provides the best predictions across all molecules or datasets.
 
-Two highly accurate models that consistently fail on the same molecules
-contribute little when combined. In contrast, two models whose errors
-occur on different compounds can complement each other, allowing one
-model to compensate for the other's weaknesses.
+Hence, evaluating feature–model combinations individually and subsequently exploring whether complementary models can be combined into ensembles might prove an attractive strategy especially with respect to small datasets that could be prone to overfitting.
+
+---
+
+## Ensemble Strategy
+
+Model diversity alone does not guarantee that ensembling will improve performance. A simple average assumes that all models contribute equally. However, averaging can also weaken a strong prediction on a difficult molecule by pulling it toward the consensus of weaker models. Therefore, blindly combining multiple models can dilute accurate predictions rather than improve them. The key is to identify models that make different errors.
+
+Two highly accurate models that consistently succeed and fail on the same molecules provide limited additional information when combined. In contrast, models whose errors occur on different molecules can complement one another, allowing one model to compensate for the weaknesses of another.
 
 ## Complementarity-Based Ensemble Selection
 
-Instead of ensembling every possible combination, candidate pairs are
-selected based on **prediction complementarity**. Complementarity is
-evaluated using three diversity measures:
+Rather than evaluating every possible model combination, candidate model pairs are selected based on prediction complementarity.
 
--   **Q-statistic** -- Measures correlation between correct and
-    incorrect predictions of two models (*−1 = highly complementary, +1
-    = highly redundant*).
--   **Disagreement** -- Fraction of molecules where only one model
-    predicts correctly.
--   **Double-fault** -- Fraction of molecules where both models fail
-    simultaneously (*lower is better*).
+Three diversity measures are used:
 
-These metrics are computed from fold-based training predictions and
-analyzed separately for **activity cliff** and **non-cliff** molecules
-to identify model pairs that are both **accurate** and **diverse**.
+* **Q-statistic** — Measures the correlation between the correct and incorrect predictions of two models. Values closer to −1 indicate greater complementarity, while values closer to +1 indicate greater redundancy.
+* **Disagreement** — Fraction of molecules for which exactly one of the two models makes an acceptable prediction. Higher values indicate greater diversity.
+* **Double-fault** — Fraction of molecules for which both models simultaneously make unacceptable predictions. Lower values indicate better complementarity.
 
-Single models and selected ensembles are then ranked according to their
-**test RMSE**, and the highest-performing models can be exported as
-serialized files for downstream prediction. This approach ensures that
-ensembles are formed because they genuinely compensate for each other's
-errors, rather than simply averaging together a collection of different
-models.
+These metrics are calculated using cross-validation (CV) training predictions to identify model pairs that are both accurate and complementary.
+
+### Dynamic Error Threshold
+
+The complementarity metrics require each prediction to be classified as either a correct or incorrect prediction based on its error relative to the experimental value. A fixed error threshold, such as 0.5, is not appropriate across datasets because prediction difficulty and activity distributions can vary substantially.
+
+For example:
+
+* In a highly homogeneous dataset where most models make small errors, a fixed threshold may classify nearly all predictions as correct, providing little meaningful information about model complementarity.
+* In a difficult dataset where most models have large errors, the same threshold may classify nearly all predictions as incorrect, again making the diversity metrics uninformative.
+
+To address this, a dynamic error threshold derived from the performance of the top three models on the cross-validation predictions is being computed. This provides a dataset-dependent definition of acceptable prediction error and allows the complementarity metrics to remain informative across datasets with different levels of prediction difficulty.
+
+---
+
+## Model and Ensemble Ranking
+
+Individual models and selected ensembles are evaluated on a held-out scaffold split test set that is not used during model or ensemble selection. Models are ranked according to test RMSE, and the highest-performing models and ensembles are exported for downstream prediction.
+
+---
 
 ## Installation
 
@@ -73,49 +69,31 @@ Create the required Conda environment using the provided `environment.yml` file:
 conda env create -f environment.yml
 conda activate embedding-pipeline
 ```
+
 ---
 
 ## Training Ensemble Models
 
-To reproduce the ensemble selection pipeline and generate the final serialized ensemble models, run the Jupyter notebook:
-
-```text
-ensemble_modelling.ipynb
+Use `ensem.py` to run the full feature/CV/ensemble training pipeline on a labeled dataset.
+```bash
+python ensem.py --data-path "train_val.csv" --smiles-col "Drug" --activity-col "Y" --output-dir "models1"
 ```
-
-The notebook evaluates individual models, computes complementarity metrics (Q-statistic, disagreement, and double-fault), ranks candidate ensembles, and exports the selected models as `.pkl` files.
-
----
+| Argument | Description |
+|---|---|
+| `--data-path` | CSV with training/validation data. |
+| `--smiles-col` | SMILES column name. |
+| `--activity-col` | Target/activity column name. |
+| `--output-dir` | Directory to save models, features, and results. |
 
 ## Making Predictions
 
-Use `prediction.py` to generate predictions for new molecules from a CSV file containing SMILES strings.
-
-### Command
-
+Use `prediction.py` to generate predictions for new molecules from a CSV of SMILES.
 ```bash
-python prediction.py \
-    --model_path "model_path.pkl" \
-    --input_csv "input_csv_path.csv" \
-    --smiles_col "column_name" \
-    --output_csv "output_csv_path.csv"
+python prediction.py --model_path "model_path.pkl" --input_csv "input.csv" --smiles_col "column_name" --output_csv "output.csv"
 ```
-
-### Arguments
-
 | Argument | Description |
-|----------|-------------|
-| `--model_path` | Path to the trained `.pkl` model generated from the ensemble pipeline. |
-| `--input_csv` | Input CSV file containing molecules to predict. |
-| `--smiles_col` | Name of the column containing SMILES strings. |
-| `--output_csv` | Path where the prediction results will be saved. |
-
-### Example
-
-```bash
-python prediction.py \
-    --model_path models/top1_model.pkl \
-    --input_csv data/test_molecules.csv \
-    --smiles_col SMILES \
-    --output_csv predictions.csv
-```
+|---|---|
+| `--model_path` | Path to trained `.pkl` model. |
+| `--input_csv` | CSV with molecules to predict. |
+| `--smiles_col` | SMILES column name. |
+| `--output_csv` | Path to save predictions. |
